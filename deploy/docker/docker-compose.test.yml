@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: aicouncil-openwebui-test
+    ports:
+      - "8080:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OPENAI_API_BASE_URL=http://litellm:4000/v1
+      - ENABLE_ADMIN_CHAT_ACCESS=true
+    depends_on:
+      - litellm
+      - ollama
+    networks:
+      - aicouncil-test
+    profiles:
+      - "!ci"  # Skip in CI by default
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main
+    container_name: aicouncil-litellm-test
+    ports:
+      - "4000:4000"
+    environment:
+      - LITELLM_LOG=info
+      - LITELLM_MASTER_KEY=test-key
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    command: >
+      litellm
+      --config /app/config.yaml
+      --port 4000
+    depends_on:
+      - ollama
+    networks:
+      - aicouncil-test
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: aicouncil-ollama-test
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_NUM_PARALLEL=1
+    volumes:
+      - ollama_data_test:/root/.ollama
+    networks:
+      - aicouncil-test
+
+  council:
+    build:
+      context: ../../services/council
+      dockerfile: Dockerfile
+    container_name: aicouncil-council-test
+    ports:
+      - "8000:8000"
+    environment:
+      - COUNCIL_DEBUG=true
+      - LITELLM_BASE_URL=http://litellm:4000/v1
+      - LITELLM_API_KEY=test-key
+      - FALLBACK_MODEL=ollama/llama2
+    depends_on:
+      - litellm
+      - ollama
+    networks:
+      - aicouncil-test
+
+networks:
+  aicouncil-test:
+    driver: bridge
+
+volumes:
+  ollama_data_test:
