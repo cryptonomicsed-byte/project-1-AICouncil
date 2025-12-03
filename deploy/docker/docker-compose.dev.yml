@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: aicouncil-openwebui-dev
+    ports:
+      - "8080:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OPENAI_API_KEY=${VENICE_API_KEY:-test-key}
+      - OPENAI_API_BASE_URL=http://litellm:4000/v1
+      - ENABLE_ADMIN_CHAT_ACCESS=true
+      - DEBUG=true
+    volumes:
+      - openwebui_data_dev:/app/backend/data
+    depends_on:
+      - litellm
+      - ollama
+    networks:
+      - aicouncil-dev
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main
+    container_name: aicouncil-litellm-dev
+    ports:
+      - "4000:4000"
+    environment:
+      - LITELLM_LOG=debug
+      - LITELLM_MASTER_KEY=test-master-key
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    command: >
+      litellm
+      --config /app/config.yaml
+      --port 4000
+      --logs
+    depends_on:
+      - ollama
+    networks:
+      - aicouncil-dev
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: aicouncil-ollama-dev
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_NUM_PARALLEL=2
+    volumes:
+      - ollama_data_dev:/root/.ollama
+    networks:
+      - aicouncil-dev
+
+  council:
+    build:
+      context: ../../services/council
+      dockerfile: Dockerfile
+    container_name: aicouncil-council-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - COUNCIL_DEBUG=true
+      - LITELLM_BASE_URL=http://litellm:4000/v1
+      - LITELLM_API_KEY=test-master-key
+      - FALLBACK_MODEL=ollama/llama2
+    volumes:
+      - ../../services/council:/app
+    depends_on:
+      - litellm
+      - ollama
+    networks:
+      - aicouncil-dev
+
+  redis:
+    image: redis:7-alpine
+    container_name: aicouncil-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    networks:
+      - aicouncil-dev
+
+networks:
+  aicouncil-dev:
+    driver: bridge
+
+volumes:
+  openwebui_data_dev:
+  ollama_data_dev:
+  redis_data_dev:

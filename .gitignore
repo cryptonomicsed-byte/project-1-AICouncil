@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.egg-info/
+.venv/
+venv/
+env/
+*.pyc
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime
+dist/
+build/
+.next/
+out/
+.nuxt/
+coverage/
+.nyc_output/
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Miscellaneous
+*.bak
+*.tmp
+.cache/
+temp/
+tmp/
