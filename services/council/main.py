@@ -22,11 +22,12 @@ class CouncilConfig:
     debug: bool = os.getenv("COUNCIL_DEBUG", "false").lower() == "true"
     deliberation_timeout: int = int(os.getenv("COUNCIL_DELIBERATION_TIMEOUT", "30"))
     min_consensus: float = float(os.getenv("COUNCIL_MIN_CONSENSUS", "0.5"))
-    litellm_base_url: str = os.getenv("LITELLM_BASE_URL", "http://litellm:4000/v1")
+    litellm_base_url: str = os.getenv("LITELLM_BASE_URL", "http://localhost:4000/v1")
     litellm_api_key: str = os.getenv("LITELLM_API_KEY", "test-key")
     fallback_model: str = os.getenv("FALLBACK_MODEL", "ollama/llama2")
     venice_api_key: str = os.getenv("VENICE_API_KEY", "")
     venice_api_base: str = os.getenv("VENICE_API_BASE", "https://api.venice.ai/v1")
+    port: int = int(os.getenv("COUNCIL_PORT", "8000"))
 
 
 config = CouncilConfig()
@@ -265,9 +266,18 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
     
+    print(f"\n{'='*60}")
+    print(f"🏛️  AICouncil Service")
+    print(f"{'='*60}")
+    print(f"Listening on: http://0.0.0.0:{config.port}")
+    print(f"API Docs: http://localhost:{config.port}/docs")
+    print(f"Health: http://localhost:{config.port}/health")
+    print(f"{'='*60}\n")
+    
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8000,
-        reload=config.debug
+        port=config.port,
+        reload=config.debug,
+        access_log=not config.debug
     )
