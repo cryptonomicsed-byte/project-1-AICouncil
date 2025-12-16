@@ -25,24 +25,22 @@ Phase 1 (30 min)  → Test everything locally
 
 ## 🟢 PHASE 2: Deploy Smart Contract
 
-**File**: `PHASE_2_DEPLOYMENT.md`
+**File**: `PHASE_2_SUI_DEPLOYMENT.md`
 
 ```bash
 # Quick steps
 cd contracts
-npm install
-cp .env.example .env
-# Edit .env with your private key
-npm run compile
-npm run deploy:mumbai
+sui move build
+sui client publish --gas-budget 100000000
 
 # You'll get:
-# ✅ Contract Address: 0x...
-# ✅ Contract ABI: [...] 
+# ✅ Package ID: 0x...
+# ✅ Registry ID: 0x...
+# ✅ Counter ID: 0x...
 # Save these!
 ```
 
-**Next**: Copy contract address to root `.env`
+**Next**: Copy IDs to root `.env`
 
 ---
 

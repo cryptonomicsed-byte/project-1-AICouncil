@@ -49,14 +49,15 @@ app = FastAPI(lifespan=lifespan)
 
 ## Step 2: Configure Environment
 
-Update `.env` with blockchain settings:
+Update `.env` with Sui blockchain settings:
 
 ```bash
 # From Phase 2 (Smart Contract Deployment)
-BRAIN_CONTRACT_ADDRESS=0xaBcD1234567890...
-BRAIN_CONTRACT_ABI=[...paste full ABI...]
-POLYGON_RPC_URL=https://rpc-mumbai.maticvigil.com
-BLOCKCHAIN_CHAIN=polygon
+SUI_RPC_URL=https://fullnode.testnet.sui.io:443
+SUI_NETWORK=testnet
+NEURAL_BRAIN_PACKAGE_ID=0xaBcD1234567890...
+AGENT_REGISTRY_ID=0x...
+ROUND_COUNTER_ID=0x...
 
 # IPFS (optional, for archival)
 IPFS_HOST=/ip4/127.0.0.1/tcp/5001

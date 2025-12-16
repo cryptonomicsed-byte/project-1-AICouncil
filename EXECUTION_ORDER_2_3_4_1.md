@@ -6,27 +6,25 @@ Execute in this order: **Deployment → Integration → UI → Testing**
 
 ## 🟢 Phase 2: Smart Contract Deployment (30 mins)
 
-**Goal**: Deploy NeuralBrain.sol to Polygon Mumbai testnet
+**Goal**: Deploy NeuralBrain Move contract to Sui testnet
 
 ### Quick Start
 ```bash
 cd contracts
-npm install
-cp .env.example .env
-# Edit .env with PRIVATE_KEY and RPC_URL
-npm run compile
-npm run deploy:mumbai
+sui move build
+sui client publish --gas-budget 100000000
 ```
 
 ### Save These Values
 After successful deployment, you'll get:
-- ✅ `CONTRACT_ADDRESS` – Copy this!
-- ✅ `CONTRACT_ABI` – Extract from artifacts/contracts/NeuralBrain.sol/NeuralBrain.json
+- ✅ `PACKAGE_ID` – Copy this!
+- ✅ `AGENT_REGISTRY_ID` – For agent management
+- ✅ `ROUND_COUNTER_ID` – For consensus rounds
 
 ### Next
-→ Add contract address to root `.env`
+→ Add IDs to root `.env`
 
-**Details**: See `PHASE_2_DEPLOYMENT.md`
+**Details**: See `PHASE_2_SUI_DEPLOYMENT.md`
 
 ---
 
