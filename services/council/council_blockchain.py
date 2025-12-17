@@ -42,7 +42,7 @@ class BlockchainDeliberationResponse(BaseModel):
     # Blockchain proofs
     round_id: int
     on_chain_proof: Optional[str] = None
-    ipfs_proofs: Optional[dict] = None
+    arweave_proofs: Optional[dict] = None
     synapses: Optional[dict] = None
     timestamp: str
 
@@ -83,8 +83,8 @@ async def register_blockchain_routes(app):
         
         Returns:
         - Consensus score and decision
-        - On-chain transaction hash (Polygon)
-        - IPFS archive of deliberation
+        - On-chain transaction hash (Sui)
+        - Arweave archive of deliberation
         - Agent influence synapses
         """
         
@@ -114,13 +114,13 @@ async def register_blockchain_routes(app):
                     "position": "agree" if state['confidence'] > 0.6 else "partial",
                     "confidence": state['confidence'],
                     "reasoning": state['reasoning'][:200],  # Truncate for API
-                    "ipfs_hash": state.get('ipfs_hash')
+                    "arweave_hash": state.get('arweave_hash')
                 }
                 for agent_id, state in result['agent_states'].items()
             ]
             
             # Generate chairman summary
-            chairman_summary = f"Council reached {result['consensus_score']:.0%} consensus through blockchain-recorded deliberation. {len(result['agent_states'])} agents participated. All reasoning archived to IPFS with on-chain proofs."
+            chairman_summary = f"Council reached {result['consensus_score']:.0%} consensus through blockchain-recorded deliberation. {len(result['agent_states'])} agents participated. All reasoning archived to Arweave with on-chain proofs."
             
             recommendation = (
                 "Proceed with proposal" if result['consensus_score'] > 0.7
@@ -137,7 +137,7 @@ async def register_blockchain_routes(app):
                 recommendation=recommendation,
                 round_id=result['round_id'],
                 on_chain_proof=result['on_chain_proof'],
-                ipfs_proofs=result['ipfs_proofs'],
+                arweave_proofs=result['arweave_proofs'],
                 synapses=result['synapses'],
                 timestamp=result['timestamp']
             )
@@ -153,9 +153,9 @@ async def register_blockchain_routes(app):
         
         return {
             "status": "ready",
-            "blockchain_chain": os.getenv("BLOCKCHAIN_CHAIN", "polygon"),
+            "blockchain_chain": os.getenv("BLOCKCHAIN_CHAIN", "sui"),
             "contract_address": os.getenv("BRAIN_CONTRACT_ADDRESS", "not_configured"),
-            "ipfs_enabled": brain.ipfs is not None,
+            "arweave_enabled": brain.arweave is not None,
             "consensus_rounds": len(brain.consensus_rounds),
             "endpoints": {
                 "deliberate": "/api/council/deliberate-blockchain",

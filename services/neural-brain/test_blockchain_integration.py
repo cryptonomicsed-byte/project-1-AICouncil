@@ -38,12 +38,12 @@ async def test_basic_deliberation():
     )
     
     assert result['consensus_score'] > 0
-    assert result['topic'] == agents[0]['id']
+    assert result['topic'] == "Should we implement blockchain consensus for AI systems?"
     assert len(result['agent_states']) == 3
     
     print(f"✓ Consensus score: {result['consensus_score']:.2%}")
     print(f"✓ Agents participated: {len(result['agent_states'])}")
-    print(f"✓ IPFS archive: {result['ipfs_proofs'] is not None}")
+    print(f"✓ Arweave archive: {result['arweave_proofs'] is not None}")
     print(f"✓ Blockchain proof: {result['on_chain_proof'] is not None}")
 
 
@@ -223,9 +223,9 @@ async def test_full_workflow():
     if result['on_chain_proof']:
         print(f"   ✓ On-chain TX: {result['on_chain_proof'][:16]}...")
     
-    if result['ipfs_proofs']:
-        print(f"   ✓ IPFS archive: {result['ipfs_proofs']['consensus'][:8]}...")
-        for agent_id in result['ipfs_proofs']['agents']:
+    if result['arweave_proofs']:
+        print(f"   ✓ Arweave archive: {result['arweave_proofs']['consensus'][:8]}...")
+        for agent_id in result['arweave_proofs']['agents']:
             print(f"     - {agent_id}")
     
     print(f"\n5️⃣  Synapse analysis...")
@@ -275,7 +275,7 @@ async def main():
             'consensus_reached': result['consensus_reached'],
             'agents': len(result['agent_states']),
             'on_chain_proof': result['on_chain_proof'] is not None,
-            'ipfs_archive': result['ipfs_proofs'] is not None,
+            'arweave_archive': result['arweave_proofs'] is not None,
             'timestamp': result['timestamp']
         }
         print(json.dumps(summary, indent=2, default=str))

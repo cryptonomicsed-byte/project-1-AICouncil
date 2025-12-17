@@ -5,6 +5,7 @@ Deliberation engine for consensus-driven decision making
 
 import os
 from typing import Optional
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
@@ -12,6 +13,14 @@ from pydantic import BaseModel, Field
 
 # Load environment variables
 load_dotenv()
+
+# Import blockchain integration
+try:
+    from council_blockchain import register_blockchain_routes
+    BLOCKCHAIN_AVAILABLE = True
+except ImportError:
+    BLOCKCHAIN_AVAILABLE = False
+    print("⚠️  Blockchain integration not available")
 
 # ============================================
 # Configuration
@@ -71,31 +80,42 @@ class HealthCheck(BaseModel):
 
 
 # ============================================
-# FastAPI App
+# FastAPI App with Lifecycle
 # ============================================
 
-app = FastAPI(
-    title="AICouncil Service",
-    description="Deliberation engine for consensus-driven decision making",
-    version="0.1.0"
-)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize service on startup"""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage app startup and shutdown"""
+    # Startup
     print(f"🏛️  AICouncil Service starting...")
     print(f"   Debug: {config.debug}")
     print(f"   Deliberation Timeout: {config.deliberation_timeout}s")
     print(f"   Min Consensus: {config.min_consensus}")
     print(f"   LiteLLM Base URL: {config.litellm_base_url}")
     print(f"   Fallback Model: {config.fallback_model}")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown"""
+    
+    # Register blockchain routes if available
+    if BLOCKCHAIN_AVAILABLE:
+        try:
+            await register_blockchain_routes(app)
+            print(f"✅ Blockchain integration loaded")
+        except Exception as e:
+            print(f"⚠️  Blockchain integration failed: {e}")
+    else:
+        print(f"⚠️  Blockchain integration not available")
+    
+    yield
+    
+    # Shutdown
     print("🏛️  AICouncil Service shutting down...")
+
+
+app = FastAPI(
+    title="AICouncil Service",
+    description="Deliberation engine for consensus-driven decision making",
+    version="0.1.0",
+    lifespan=lifespan
+)
 
 
 # ============================================

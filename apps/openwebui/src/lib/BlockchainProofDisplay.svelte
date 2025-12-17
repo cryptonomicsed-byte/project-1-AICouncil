@@ -9,9 +9,9 @@
 	export let deliberationResult = null;
 	export let showDetails = false;
 
-	let chain = 'polygon_mumbai';
+	let chain = 'sui_testnet';
 	let explorerUrl = '';
-	let ipfsGateway = 'https://gateway.pinata.cloud/ipfs/';
+	let arweaveGateway = 'https://arweave.net/';
 
 	$: if (deliberationResult?.on_chain_proof) {
 		explorerUrl = getExplorerUrl(deliberationResult.on_chain_proof);
@@ -19,18 +19,20 @@
 
 	function getExplorerUrl(txHash) {
 		const explorers = {
+			sui_testnet: 'https://suiscan.xyz/testnet/tx/',
+			sui_mainnet: 'https://suiscan.xyz/mainnet/tx/',
 			polygon_mumbai: 'https://mumbai.polygonscan.com/tx/',
 			polygon_mainnet: 'https://polygonscan.com/tx/',
 			solana_devnet: 'https://solana.fm/tx/',
 			solana_mainnet: 'https://solana.fm/tx/'
 		};
 
-		const baseUrl = explorers[chain] || explorers.polygon_mumbai;
+		const baseUrl = explorers[chain] || explorers.sui_testnet;
 		return baseUrl + txHash;
 	}
 
-	function getIPFSUrl(hash) {
-		return ipfsGateway + hash;
+	function getArweaveUrl(hash) {
+		return arweaveGateway + hash;
 	}
 
 	function copyToClipboard(text) {
@@ -101,24 +103,24 @@
 				</div>
 			{/if}
 
-			<!-- IPFS Archives -->
-			{#if deliberationResult.ipfs_proofs}
+			<!-- Arweave Archives -->
+			{#if deliberationResult.arweave_proofs}
 				<div class="proof-section">
 					<div class="section-header">
-						<h4>📦 IPFS Archive</h4>
-						<span class="count-badge">{Object.keys(deliberationResult.ipfs_proofs.agents || {}).length} agents</span>
+						<h4>📦 Arweave Permanent Archive</h4>
+						<span class="count-badge">{Object.keys(deliberationResult.arweave_proofs.agents || {}).length} agents</span>
 					</div>
 					<div class="proof-content">
-						{#if deliberationResult.ipfs_proofs.consensus}
+						{#if deliberationResult.arweave_proofs.consensus}
 							<div class="proof-item">
 								<span class="label">Consensus Record:</span>
-								<code class="hash">{deliberationResult.ipfs_proofs.consensus.slice(0, 8)}...</code>
+								<code class="hash">{deliberationResult.arweave_proofs.consensus.slice(0, 8)}...</code>
 								<a
-									href={getIPFSUrl(deliberationResult.ipfs_proofs.consensus)}
+									href={getArweaveUrl(deliberationResult.arweave_proofs.consensus)}
 									target="_blank"
 									rel="noopener noreferrer"
-									class="ipfs-link"
-									title="View on IPFS"
+									class="arweave-link"
+									title="View on Arweave"
 								>
 									🔗
 								</a>
@@ -126,18 +128,18 @@
 						{/if}
 
 						<div class="agent-archives">
-							<span class="sub-label">Agent Thinking:</span>
+							<span class="sub-label">Agent Reasoning (Permanent):</span>
 							<ul>
-								{#each Object.entries(deliberationResult.ipfs_proofs.agents || {}) as [agentId, hash]}
+								{#each Object.entries(deliberationResult.arweave_proofs.agents || {}) as [agentId, hash]}
 									<li>
 										<span class="agent-id">{agentId}</span>
 										<code class="hash">{hash.slice(0, 8)}...</code>
 										<a
-											href={getIPFSUrl(hash)}
+											href={getArweaveUrl(hash)}
 											target="_blank"
 											rel="noopener noreferrer"
-											class="ipfs-link"
-											title="View on IPFS"
+											class="arweave-link"
+											title="View on Arweave"
 										>
 											🔗
 										</a>
@@ -365,7 +367,7 @@
 	}
 
 	.copy-btn,
-	.ipfs-link {
+	.arweave-link {
 		background: none;
 		border: none;
 		cursor: pointer;
@@ -375,7 +377,7 @@
 	}
 
 	.copy-btn:hover,
-	.ipfs-link:hover {
+	.arweave-link:hover {
 		transform: scale(1.2);
 	}
 

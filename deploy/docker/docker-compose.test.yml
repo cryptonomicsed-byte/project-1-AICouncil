@@ -1,75 +1,95 @@
 version: '3.8'
 
 services:
-  openwebui:
-    image: ghcr.io/open-webui/open-webui:latest
-    container_name: aicouncil-openwebui-test
-    ports:
-      - "8080:8080"
-    environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - OPENAI_API_BASE_URL=http://litellm:4000/v1
-      - ENABLE_ADMIN_CHAT_ACCESS=true
-    depends_on:
-      - litellm
-      - ollama
-    networks:
-      - aicouncil-test
-    profiles:
-      - "!ci"  # Skip in CI by default
-
+  # LiteLLM Proxy
   litellm:
-    image: ghcr.io/berriai/litellm:main
-    container_name: aicouncil-litellm-test
+    build:
+      context: ../../services/litellm
+      dockerfile: Dockerfile
     ports:
       - "4000:4000"
     environment:
-      - LITELLM_LOG=info
-      - LITELLM_MASTER_KEY=test-key
-    volumes:
-      - ./litellm/config.yaml:/app/config.yaml:ro
-    command: >
-      litellm
-      --config /app/config.yaml
-      --port 4000
+      LITELLM_LOG_LEVEL: debug
+      LITELLM_PORT: 4000
+      VENICE_API_KEY: ${VENICE_API_KEY:-test-key}
+      OLLAMA_ENDPOINT: http://ollama:11434
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-test-master-key}
     depends_on:
       - ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/models"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
-      - aicouncil-test
+      - aicouncil
 
+  # Ollama (Local LLM)
   ollama:
     image: ollama/ollama:latest
-    container_name: aicouncil-ollama-test
     ports:
       - "11434:11434"
     environment:
-      - OLLAMA_NUM_PARALLEL=1
+      OLLAMA_HOST: 0.0.0.0:11434
     volumes:
-      - ollama_data_test:/root/.ollama
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
-      - aicouncil-test
+      - aicouncil
 
+  # Council Service
   council:
     build:
       context: ../../services/council
       dockerfile: Dockerfile
-    container_name: aicouncil-council-test
     ports:
       - "8000:8000"
     environment:
-      - COUNCIL_DEBUG=true
-      - LITELLM_BASE_URL=http://litellm:4000/v1
-      - LITELLM_API_KEY=test-key
-      - FALLBACK_MODEL=ollama/llama2
+      COUNCIL_DEBUG: "true"
+      COUNCIL_PORT: 8000
+      COUNCIL_DELIBERATION_TIMEOUT: 30
+      COUNCIL_MIN_CONSENSUS: 0.5
+      LITELLM_BASE_URL: http://litellm:4000/v1
+      LITELLM_API_KEY: ${LITELLM_MASTER_KEY:-test-master-key}
+      FALLBACK_MODEL: ollama/llama2
+      VENICE_API_KEY: ${VENICE_API_KEY:-test-key}
     depends_on:
-      - litellm
-      - ollama
+      litellm:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
-      - aicouncil-test
+      - aicouncil
+
+  # Blockchain Neural Brain (Test Runner)
+  neural-brain-test:
+    build:
+      context: ../../services/neural-brain
+      dockerfile: Dockerfile.test
+    environment:
+      BLOCKCHAIN_CHAIN: sui
+      SUI_RPC_URL: https://fullnode.testnet.sui.io:443
+      CONSENSUS_THRESHOLD: "0.5"
+      ARWEAVE_WALLET_PATH: ${ARWEAVE_WALLET_PATH:-}
+    depends_on:
+      council:
+        condition: service_healthy
+    networks:
+      - aicouncil
+    command: pytest test_blockchain_integration.py -v --tb=short
 
 networks:
-  aicouncil-test:
+  aicouncil:
     driver: bridge
 
 volumes:
-  ollama_data_test:
+  ollama_data:

@@ -10,7 +10,7 @@ import asyncio
 from typing import Dict, List, Optional
 from datetime import datetime
 from dotenv import load_dotenv
-import ipfshttpclient
+import arweave
 import httpx
 
 load_dotenv()
@@ -23,7 +23,7 @@ class BlockchainNeuralBrain:
     
     def __init__(self, chain: str = "sui"):
         self.chain = chain
-        self.ipfs = self._init_ipfs()
+        self.arweave = self._init_arweave()
         self.sui_rpc = self._init_sui()
         self.contract_id = os.getenv("NEURAL_BRAIN_CONTRACT_ID", "")
         
@@ -32,17 +32,18 @@ class BlockchainNeuralBrain:
         self.neural_states: Dict = {}
         self.synapses: Dict = {}
     
-    def _init_ipfs(self):
-        """Initialize IPFS connection"""
+    def _init_arweave(self):
+        """Initialize Arweave connection"""
         try:
-            api = ipfshttpclient.connect(
-                '/ip4/127.0.0.1/tcp/5001',
-                timeout=10
-            )
-            print("✓ IPFS connected")
-            return api
+            wallet_path = os.getenv("ARWEAVE_WALLET_PATH", None)
+            if wallet_path and os.path.exists(wallet_path):
+                ar = arweave.Arweave(wallet_file=wallet_path)
+            else:
+                ar = arweave.Arweave()
+            print("✓ Arweave connected")
+            return ar
         except Exception as e:
-            print(f"⚠ IPFS unavailable: {e}. Using memory-only mode.")
+            print(f"⚠ Arweave unavailable: {e}. Using memory-only mode.")
             return None
     
     def _init_sui(self):
@@ -105,15 +106,15 @@ class BlockchainNeuralBrain:
         
         # 5. Record on blockchain
         on_chain_proof = None
-        if self.contract:
+        if self.contract_id:
             on_chain_proof = await self._record_to_blockchain(
                 round_id, agent_states, consensus_score
             )
         
-        # 6. Archive to IPFS
-        ipfs_proofs = None
-        if self.ipfs:
-            ipfs_proofs = await self._archive_to_ipfs(
+        # 6. Archive to Arweave
+        arweave_proofs = None
+        if self.arweave:
+            arweave_proofs = await self._archive_to_arweave(
                 round_id, agent_states, consensus_score
             )
         
@@ -126,7 +127,7 @@ class BlockchainNeuralBrain:
             ),
             'agent_states': agent_states,
             'on_chain_proof': on_chain_proof,
-            'ipfs_proofs': ipfs_proofs,
+            'arweave_proofs': arweave_proofs,
             'synapses': self.synapses.get(round_id, {}),
             'timestamp': datetime.utcnow().isoformat()
         }
@@ -188,7 +189,7 @@ class BlockchainNeuralBrain:
                 'reasoning': result,
                 'reasoning_hash': reasoning_hash,
                 'timestamp': datetime.utcnow().isoformat(),
-                'ipfs_hash': None,
+                'arweave_hash': None,
                 'confidence': self._estimate_confidence(result)
             }
             
@@ -318,36 +319,48 @@ class BlockchainNeuralBrain:
             print(f"   ⚠ Blockchain recording failed: {e}")
             return None
     
-    async def _archive_to_ipfs(
+    async def _archive_to_arweave(
         self,
         round_id: int,
         agent_states: Dict,
         consensus_score: float
     ) -> Optional[Dict]:
         """
-        Archive deliberation to IPFS
+        Archive deliberation to Arweave
         """
-        if not self.ipfs:
+        if not self.arweave:
             return None
         
-        print(f"\n📦 Archiving to IPFS...")
+        print(f"\n📦 Archiving to Arweave...")
         
         try:
             # Archive each agent's thinking
             agent_hashes = {}
             for agent_id, state in agent_states.items():
-                ipfs_data = {
+                arweave_data = {
                     'agent_id': agent_id,
                     'reasoning': state['reasoning'],
                     'confidence': state['confidence'],
                     'timestamp': state['timestamp']
                 }
                 
-                result = self.ipfs.add_json(ipfs_data)
-                agent_hashes[agent_id] = result
-                state['ipfs_hash'] = result
+                # Post to Arweave
+                tx = self.arweave.create_transaction(
+                    data=json.dumps(arweave_data),
+                    tags={
+                        'Content-Type': 'application/json',
+                        'Council': 'AICouncil',
+                        'Agent': agent_id,
+                        'Round': str(round_id)
+                    }
+                )
+                self.arweave.sign_transaction(tx)
+                self.arweave.send_transaction(tx)
                 
-                print(f"   ✓ {agent_id}: {result[:8]}...")
+                agent_hashes[agent_id] = tx.id
+                state['arweave_hash'] = tx.id
+                
+                print(f"   ✓ {agent_id}: {tx.id[:8]}...")
             
             # Archive consensus record
             consensus_data = {
@@ -357,16 +370,27 @@ class BlockchainNeuralBrain:
                 'timestamp': datetime.utcnow().isoformat()
             }
             
-            consensus_hash = self.ipfs.add_json(consensus_data)
-            print(f"   ✓ Consensus record: {consensus_hash[:8]}...")
+            consensus_tx = self.arweave.create_transaction(
+                data=json.dumps(consensus_data),
+                tags={
+                    'Content-Type': 'application/json',
+                    'Council': 'AICouncil',
+                    'Type': 'Consensus',
+                    'Round': str(round_id)
+                }
+            )
+            self.arweave.sign_transaction(consensus_tx)
+            self.arweave.send_transaction(consensus_tx)
+            
+            print(f"   ✓ Consensus record: {consensus_tx.id[:8]}...")
             
             return {
                 'agents': agent_hashes,
-                'consensus': consensus_hash
+                'consensus': consensus_tx.id
             }
         
         except Exception as e:
-            print(f"   ⚠ IPFS archival failed: {e}")
+            print(f"   ⚠ Arweave archival failed: {e}")
             return None
     
     def get_consensus_history(self) -> List[Dict]:
